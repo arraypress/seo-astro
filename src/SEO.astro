@@ -1,0 +1,31 @@
+---
+/**
+ * SEO.astro
+ * ---------
+ *
+ * Idiomatic Astro wrapper over @arraypress/seo's `buildHead()`. Drop it in
+ * your `<head>` with the same options `buildHead` accepts — title, description,
+ * canonical url, image, Open Graph + Twitter, robots, hreflang, article meta,
+ * verification, and JSON-LD — and it renders the full set of tags for you.
+ *
+ * @example
+ *   ---
+ *   import { SEO } from '@arraypress/seo-astro';
+ *   ---
+ *   <head>
+ *     <meta charset="utf-8" />
+ *     <SEO
+ *       title="My Page"
+ *       description="A great page"
+ *       url={Astro.url.href}
+ *       image="/og.png"
+ *       siteName="Example"
+ *     />
+ *   </head>
+ */
+import { buildHead } from '@arraypress/seo';
+import type { SEOProps } from './types';
+
+const head = buildHead(Astro.props as SEOProps);
+---
+<Fragment set:html={head} />
