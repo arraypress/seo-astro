@@ -1,6 +1,6 @@
 {
   "name": "@arraypress/seo-astro",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Idiomatic <SEO> component for Astro — title, canonical, Open Graph, Twitter, robots, hreflang, article meta + JSON-LD. A thin wrapper over @arraypress/seo.",
   "type": "module",
   "files": [
