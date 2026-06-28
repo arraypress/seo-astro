@@ -17,15 +17,20 @@
  *     <SEO
  *       title="My Page"
  *       description="A great page"
- *       url={Astro.url.href}
  *       image="/og.png"
  *       siteName="Example"
  *     />
+ *
+ *   The canonical is derived from the current URL automatically (tracking
+ *   params stripped); pass `url` only to override it.
  *   </head>
  */
-import { buildHead } from '@arraypress/seo';
+import { buildHead, canonicalize } from '@arraypress/seo';
 import type { SEOProps } from './types';
 
-const head = buildHead(Astro.props as SEOProps);
+// Auto-derive the canonical (and og:url) from the current request URL —
+// tracking params stripped — unless an explicit `url` is passed.
+const { url, ...rest } = Astro.props as SEOProps;
+const head = buildHead({ url: url ?? canonicalize(Astro.url.href), ...rest });
 ---
 <Fragment set:html={head} />
