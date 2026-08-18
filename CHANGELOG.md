@@ -5,6 +5,16 @@ All notable changes to `@arraypress/seo-astro` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] — Unreleased
+
+### Added
+
+- Re-exported the core's non-component surface — `buildHead`, `injectHead`,
+  `robotsTxt`, `canonicalize`, `escapeHtml`, plus the `BuildHeadOptions` and
+  `RobotsTxtOptions` types. An Astro project that also generates a
+  `robots.txt` no longer needs a second dependency on `@arraypress/seo`:
+  `<SEO />` and `robotsTxt()` now come from the same package.
+
 ## [1.0.1] — Unreleased
 
 ### Changed
