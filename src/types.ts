@@ -1,7 +1,7 @@
 /**
  * @module @arraypress/seo-astro/types
  */
-import type { BuildHeadOptions } from '@arraypress/seo';
+import type { BuildHeadOptions } from './core.js';
 
 /**
  * Props for `<SEO />` — identical to `buildHead()`'s options:

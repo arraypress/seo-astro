@@ -3,7 +3,7 @@
  * SEO.astro
  * ---------
  *
- * Idiomatic Astro wrapper over @arraypress/seo's `buildHead()`. Drop it in
+ * Idiomatic Astro component over the `buildHead()` builder in this package. Drop it in
  * your `<head>` with the same options `buildHead` accepts — title, description,
  * canonical url, image, Open Graph + Twitter, robots, hreflang, article meta,
  * verification, and JSON-LD — and it renders the full set of tags for you.
@@ -25,7 +25,7 @@
  *   params stripped); pass `url` only to override it.
  *   </head>
  */
-import { buildHead, canonicalize } from '@arraypress/seo';
+import { buildHead, canonicalize } from './core.js';
 import type { SEOProps } from './types';
 
 // Auto-derive the canonical (and og:url) from the current request URL —

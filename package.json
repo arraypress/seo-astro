@@ -1,7 +1,7 @@
 {
   "name": "@arraypress/seo-astro",
-  "version": "1.2.0",
-  "description": "Idiomatic <SEO> component for Astro — title, canonical, Open Graph, Twitter, robots, hreflang, article meta + JSON-LD. A thin wrapper over @arraypress/seo.",
+  "version": "2.0.0",
+  "description": "SEO for Astro \u2014 an idiomatic <SEO> component plus the head/robots.txt builders behind it. Title, canonical, Open Graph, Twitter, robots, hreflang and JSON-LD. Zero dependencies.",
   "type": "module",
   "files": [
     "src/",
@@ -19,7 +19,11 @@
       "types": "./src/types.ts",
       "default": "./src/types.ts"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./core": {
+      "types": "./src/core.d.ts",
+      "default": "./src/core.js"
+    }
   },
   "keywords": [
     "astro",
@@ -43,9 +47,6 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
-  },
-  "dependencies": {
-    "@arraypress/seo": "^1.2.0"
   },
   "peerDependencies": {
     "astro": "^6.0.0 || ^7.0.0"

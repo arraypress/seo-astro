@@ -1,8 +1,7 @@
 /**
  * @module @arraypress/seo-astro
  *
- * An idiomatic `<SEO />` component for Astro — a thin wrapper over
- * @arraypress/seo's `buildHead()`. Same options, rendered as real tags.
+ * An idiomatic `<SEO />` component for Astro —  * @arraypress/seo's `buildHead()`. Same options, rendered as real tags.
  *
  * ```astro
  * ---
@@ -29,5 +28,5 @@ export default SEO;
  * these, every consumer would have to depend on @arraypress/seo as well —
  * two packages, two version ranges, for one concern.
  */
-export { buildHead, injectHead, robotsTxt, canonicalize, escapeHtml } from '@arraypress/seo';
-export type { BuildHeadOptions, RobotsTxtOptions } from '@arraypress/seo';
+export { buildHead, injectHead, robotsTxt, canonicalize, escapeHtml } from './core.js';
+export type { BuildHeadOptions, RobotsTxtOptions } from './core.js';
