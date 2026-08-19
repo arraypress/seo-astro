@@ -1,6 +1,6 @@
 # @arraypress/seo-astro
 
-An idiomatic `<SEO />` component for Astro — a thin wrapper over [`@arraypress/seo`](https://www.npmjs.com/package/@arraypress/seo)'s `buildHead()`. Pass the same options; it renders title, canonical, Open Graph, Twitter, robots, hreflang, article meta, and JSON-LD as real tags.
+An idiomatic `<SEO />` component for Astro, plus the `buildHead()` builder behind it. Pass the options once; it renders title, canonical, Open Graph, Twitter, robots, hreflang, article meta and JSON-LD as real tags.
 
 ## Install
 
@@ -29,7 +29,7 @@ import { SEO } from '@arraypress/seo-astro';
 
 ## Props
 
-Identical to [`buildHead()`](https://www.npmjs.com/package/@arraypress/seo)'s options:
+Identical to `buildHead()`'s options:
 
 | Prop | Type | Notes |
 |---|---|---|
@@ -47,7 +47,19 @@ Identical to [`buildHead()`](https://www.npmjs.com/package/@arraypress/seo)'s op
 
 ## Why a separate package?
 
-`@arraypress/seo` is **framework-agnostic** — `buildHead()` returns an HTML string that works in Cloudflare Workers, any SSR framework, or a build script. This package is the Astro-flavoured wrapper, so you write `<SEO {...} />` instead of `<Fragment set:html={buildHead(...)} />`.
+`<SEO />` saves you writing `<Fragment set:html={buildHead(...)} />` by hand.
+
+The builders are still plain functions and are exported alongside the
+component — `buildHead`, `robotsTxt`, `canonicalize`, `escapeHtml`,
+`injectHead`. `robotsTxt()` is the one you'll reach for outside a component,
+in `src/pages/robots.txt.ts`:
+
+```ts
+import { robotsTxt } from '@arraypress/seo-astro';
+```
+
+They're also available on their own at `@arraypress/seo-astro/core` if you want
+the string output with nothing Astro-shaped attached.
 
 ## License
 
