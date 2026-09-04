@@ -146,8 +146,19 @@ long-standing heuristics for that, not a specification, which is why they're
 options. The Open Graph check *is* spec-backed: ogp.me states that `og:title`,
 `og:type`, `og:image` and `og:url` are required on every page.
 
-`auditPages(pages, options)` is exported too, if you want the findings outside
-a build.
+`auditPages(pages, options)` gives you the findings outside a build — from
+`@arraypress/seo-astro/audit/core`, which is plain JavaScript with no Astro or
+Vite involved:
+
+```js
+import { auditPages } from '@arraypress/seo-astro/audit/core';
+
+const { findings, errors } = auditPages(pages, { site: 'https://example.com' });
+```
+
+(`@arraypress/seo-astro/audit` is the Astro integration and resolves to a
+TypeScript source file, which `astro.config.mjs` handles through Vite but plain
+Node will not load.)
 
 ## Why a separate package?
 
