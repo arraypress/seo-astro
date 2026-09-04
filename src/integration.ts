@@ -72,9 +72,20 @@ const line = (f: Finding): string => `${f.path}  [${f.check}]  ${f.message}`;
 export function seoAudit(options: SeoAuditOptions = {}): AstroIntegration {
 	const { failOn = 'error', ...auditOptions } = options;
 
+	/* Astro already knows the site URL. Making the caller repeat it would be
+	 * merely annoying if getting it wrong were obvious — but without it the
+	 * audit can't tell an internal link from an external one, so every absolute
+	 * canonical reads as off-site and a 1,400-page build reports 1,400 errors
+	 * that are all false. Defaulting it here is the difference between the
+	 * integration working out of the box and being actively misleading. */
+	let siteFromConfig: string | undefined;
+
 	return {
 		name: '@arraypress/seo-astro/audit',
 		hooks: {
+			'astro:config:done': ({ config }) => {
+				siteFromConfig = config.site;
+			},
 			'astro:build:done': async ({ dir, logger }) => {
 				const root = fileURLToPath(dir);
 				const pages = await htmlPages(root);
@@ -84,7 +95,8 @@ export function seoAudit(options: SeoAuditOptions = {}): AstroIntegration {
 					return;
 				}
 
-				const result: AuditResult = auditPages(pages, auditOptions);
+				// An explicit `site` in the options still wins.
+				const result: AuditResult = auditPages(pages, { site: siteFromConfig, ...auditOptions });
 				const { findings, checked, errors, warnings } = result;
 
 				if (findings.length === 0) {

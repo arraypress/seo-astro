@@ -324,8 +324,14 @@ describe('configuration', () => {
 	});
 
 	it('works with no site given, skipping only the checks that need one', () => {
-		const result = auditPages([page({ path: '/index.html', canonical: '/' })]);
-		expect(result.findings.map((f) => f.check)).not.toContain('canonical-mismatch');
+		// Without an origin to compare against, an absolute canonical is
+		// unknowable, not off-site — reporting it would flag every page.
+		const result = auditPages([
+			page({ path: '/index.html', canonical: 'https://example.com/' }),
+			page({ path: '/a/index.html', canonical: 'https://example.com/a' }),
+		]);
+		expect(result.findings.map((f) => f.check)).not.toContain('canonical-off-site');
+		expect(result.errors).toBe(0);
 	});
 
 	it('counts errors and warnings separately', () => {

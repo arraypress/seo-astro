@@ -18,6 +18,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   A check that is wrong that often is worse than no check: it buries the 56
   findings that were real.
 
+- **The integration didn't use Astro's own `site`.** `auditPages` needs an origin
+  to tell an internal link from an external one; without one, every absolute
+  canonical read as off-site. Wired into a real 1,413-page build that meant
+  **1,413 errors, all false** — from an integration that had Astro's configured
+  `site` available the whole time. It now defaults from `astro:config:done`, and
+  an explicit `site` option still wins.
+
+- Relatedly, `canonical-off-site` no longer fires when no `site` is configured
+  at all. Without an origin to compare against, off-site is unknowable rather
+  than true.
+
 ### Changed
 
 - `canonical-mismatch` is replaced by three checks that distinguish the cases:

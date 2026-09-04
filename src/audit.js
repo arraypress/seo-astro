@@ -214,8 +214,12 @@ export function auditPages(pages = [], options = {}) {
       if (!read.canonical) add('canonical-missing', path, 'No canonical link.');
       else {
         const target = linkTarget(read.canonical, path, o.site);
-        if (target === null)
-          add('canonical-off-site', path, `Canonical points off-site: ${read.canonical}`);
+        // With no `site` configured there is no origin to compare against, so
+        // "off-site" is unknowable rather than true. Reporting it anyway would
+        // flag every absolute canonical on the site.
+        if (target === null) {
+          if (o.site) add('canonical-off-site', path, `Canonical points off-site: ${read.canonical}`);
+        }
         // A canonical pointing at another page is deduplication, not an error,
         // and whether it's correct depends on the target — so it's judged in
         // the set pass below, once every page is known.
