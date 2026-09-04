@@ -1,0 +1,77 @@
+---
+/**
+ * Breadcrumbs.astro
+ * -----------------
+ *
+ * A breadcrumb trail and its BreadcrumbList structured data, from one array.
+ *
+ * Keeping the two in sync by hand is the part that rots: someone renames a
+ * crumb in the markup, the JSON-LD keeps the old label, and Google carries on
+ * showing a trail the page doesn't have. Here they're the same array, so they
+ * can't disagree.
+ *
+ * The markup is semantic and unstyled — `nav > ol > li`, the current page
+ * marked `aria-current="page"`, separators hidden from assistive tech. Style it
+ * with the `class` prop or your own CSS.
+ *
+ * @example
+ *   ---
+ *   import { Breadcrumbs } from '@arraypress/seo-astro';
+ *   ---
+ *   <Breadcrumbs items={[
+ *     { name: 'Home', url: '/' },
+ *     { name: 'Docs', url: '/docs' },
+ *     { name: 'Installing' },
+ *   ]} />
+ */
+import { breadcrumbList, ldJson } from './core.js';
+import type { BreadcrumbItem } from './core.js';
+
+export interface Props {
+	/** The trail, outermost first. The last item is the current page. */
+	items: BreadcrumbItem[];
+	/** Separator between crumbs. Hidden from screen readers. @default '/' */
+	separator?: string;
+	/** Accessible name for the nav landmark. @default 'Breadcrumb' */
+	label?: string;
+	/** Class for the `<nav>`. */
+	class?: string;
+	/** Emit the BreadcrumbList JSON-LD. @default true */
+	jsonLd?: boolean;
+}
+
+const {
+	items = [],
+	separator = '/',
+	label = 'Breadcrumb',
+	class: className,
+	jsonLd = true,
+} = Astro.props;
+
+/* The last crumb is the page you're already on: rendered as text rather than a
+ * link, and declared with no `item` URL. Dropping it here rather than asking the
+ * caller to remember is what keeps the markup and the structured data identical
+ * — a URL passed for the last crumb is deliberately ignored, not honoured in one
+ * place and not the other. */
+const crumbs = items.map((item, i) => (i === items.length - 1 ? { name: item.name } : item));
+---
+
+<nav aria-label={label} class={className}>
+	<ol>
+		{
+			crumbs.map((crumb, i) => (
+				<li>
+					{crumb.url ? (
+						<a href={crumb.url}>{crumb.name}</a>
+					) : (
+						<span aria-current="page">{crumb.name}</span>
+					)}
+					{i < crumbs.length - 1 && <span aria-hidden="true">{separator}</span>}
+				</li>
+			))
+		}
+	</ol>
+</nav>
+{jsonLd && crumbs.length > 0 && (
+	<Fragment set:html={`<script type="application/ld+json">${ldJson(breadcrumbList(crumbs))}</script>`} />
+)}

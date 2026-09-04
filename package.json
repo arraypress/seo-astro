@@ -1,7 +1,7 @@
 {
   "name": "@arraypress/seo-astro",
-  "version": "2.0.0",
-  "description": "SEO for Astro \u2014 an idiomatic <SEO> component plus the head/robots.txt builders behind it. Title, canonical, Open Graph, Twitter, robots, hreflang and JSON-LD. Zero dependencies.",
+  "version": "2.2.0",
+  "description": "SEO for Astro — an idiomatic <SEO> component, a Breadcrumbs component, a build-time SEO audit integration, and the head/robots.txt builders behind them. Title, canonical, Open Graph, Twitter, robots, hreflang and JSON-LD. Zero dependencies.",
   "type": "module",
   "files": [
     "src/",
@@ -23,6 +23,11 @@
     "./core": {
       "types": "./src/core.d.ts",
       "default": "./src/core.js"
+    },
+    "./Breadcrumbs.astro": "./src/Breadcrumbs.astro",
+    "./audit": {
+      "types": "./src/integration.ts",
+      "default": "./src/integration.ts"
     }
   },
   "keywords": [
@@ -57,6 +62,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@types/node": "^26.4.1",
     "astro": "^7.0.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.9"

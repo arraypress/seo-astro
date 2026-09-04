@@ -56,3 +56,39 @@ describe('<SEO>', () => {
 		expect(html).not.toContain('<title>A & B "C"</title>');
 	});
 });
+
+describe('titleTemplate', () => {
+	it('substitutes %s, brand-first or brand-last', async () => {
+		const suffix = await render({ title: 'Pricing', titleTemplate: '%s — Acme' });
+		expect(suffix).toContain('<title>Pricing — Acme</title>');
+
+		const prefix = await render({ title: 'Pricing', titleTemplate: 'Acme — %s' });
+		expect(prefix).toContain('<title>Acme — Pricing</title>');
+	});
+
+	it('applies to og:title and twitter:title too', async () => {
+		const html = await render({
+			title: 'Pricing',
+			titleTemplate: 'Acme — %s',
+			twitterFallback: false,
+		});
+		expect(html).toContain('property="og:title" content="Acme — Pricing"');
+		expect(html).toContain('name="twitter:title" content="Acme — Pricing"');
+	});
+
+	it('ignores a template with no %s rather than repeating it site-wide', async () => {
+		const html = await render({ title: 'Pricing', titleTemplate: 'Acme' });
+		expect(html).toContain('<title>Pricing</title>');
+	});
+
+	it('emits no title when there is nothing to fill the template with', async () => {
+		const html = await render({ titleTemplate: 'Acme — %s', description: 'x' });
+		expect(html).not.toContain('<title>');
+		expect(html).not.toContain('og:title');
+	});
+
+	it('escapes the composed title, and treats $ in the title literally', async () => {
+		const html = await render({ title: 'Tom & $& Co', titleTemplate: 'Acme — %s' });
+		expect(html).toContain('<title>Acme — Tom &amp; $&amp; Co</title>');
+	});
+});

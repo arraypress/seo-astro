@@ -1,5 +1,9 @@
 export interface BuildHeadOptions {
   title?: string;
+  /** Template applied to `title`, with `%s` as the placeholder — `'%s — Acme'`,
+   *  or `'Acme — %s'` to lead with the brand. Applies to `<title>`, `og:title`
+   *  and `twitter:title` alike. A template without `%s` is ignored. */
+  titleTemplate?: string;
   description?: string;
   image?: string;
   /** og:image:width — only emitted when an `image` is set. */
@@ -65,3 +69,10 @@ export function canonicalize(input: string): string;
 
 /** Escape HTML entities in a string. */
 export function escapeHtml(str: string): string;
+
+export interface BreadcrumbItem { name: string; url?: string; }
+/** Build a BreadcrumbList JSON-LD object. An item with no `url` emits no `item`. */
+export function breadcrumbList(items?: BreadcrumbItem[]): object;
+
+/** Serialise JSON-LD for inline embedding, escaping `<` so a `</script>` in a value can't close the block. */
+export function ldJson(ld: object): string;

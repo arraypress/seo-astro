@@ -39,6 +39,9 @@ function esc(str) {
  *
  * @param {Object} [options={}] - SEO configuration.
  * @param {string} [options.title] - Page title (used in `<title>`, OG, and Twitter).
+ * @param {string} [options.titleTemplate] - Template applied to `title`, with `%s` as the
+ *   placeholder (e.g. `'%s — Acme'`, or `'Acme — %s'` to lead with the brand). Applies to
+ *   `<title>`, `og:title` and `twitter:title` alike. Ignored if it contains no `%s`.
  * @param {string} [options.description] - Meta description (used in meta, OG, and Twitter).
  * @param {string} [options.image] - Image URL for OG and Twitter Card.
  * @param {string} [options.url] - Canonical page URL.
@@ -83,7 +86,7 @@ function esc(str) {
  * });
  */
 export function buildHead(options = {}) {
-  const { title, description, image, imageWidth, imageHeight, imageAlt,
+  const { title, titleTemplate, description, image, imageWidth, imageHeight, imageAlt,
     url, type = 'website', robots, maxSnippet = true, siteName,
     twitterCard, twitterSite, twitterCreator, twitterImageAlt, twitterFallback = true,
     locale, articlePublished, articleModified, articleAuthor,
@@ -92,7 +95,16 @@ export function buildHead(options = {}) {
 
   const parts = [];
 
-  if (title) parts.push(`<title>${esc(title)}</title>`);
+  // Title template — `%s` is replaced with `title`, so a site sets the house
+  // style once (`'%s — Acme'`, or `'Acme — %s'` to lead with the brand) and
+  // pages pass only their own half. A template with no `%s` is ignored rather
+  // than used as-is: a typo shouldn't give every page an identical title.
+  const pageTitle =
+    title && typeof titleTemplate === 'string' && titleTemplate.includes('%s')
+      ? titleTemplate.replaceAll('%s', () => title)
+      : title;
+
+  if (pageTitle) parts.push(`<title>${esc(pageTitle)}</title>`);
 
   // Canonical — omitted on noindex pages (per Google's recommendation).
   const noindex = typeof robots === 'string' && /\bnoindex\b/i.test(robots);
@@ -114,7 +126,7 @@ export function buildHead(options = {}) {
   }
 
   // Open Graph
-  if (title) parts.push(`<meta property="og:title" content="${esc(title)}">`);
+  if (pageTitle) parts.push(`<meta property="og:title" content="${esc(pageTitle)}">`);
   parts.push(`<meta property="og:type" content="${esc(type)}">`);
   if (url) parts.push(`<meta property="og:url" content="${esc(url)}">`);
   if (description) parts.push(`<meta property="og:description" content="${esc(description)}">`);
@@ -137,7 +149,7 @@ export function buildHead(options = {}) {
   // so those duplicates are suppressed by default. `twitterFallback: false`
   // emits them explicitly.
   if (twitterFallback === false) {
-    if (title) parts.push(`<meta name="twitter:title" content="${esc(title)}">`);
+    if (pageTitle) parts.push(`<meta name="twitter:title" content="${esc(pageTitle)}">`);
     if (description) parts.push(`<meta name="twitter:description" content="${esc(description)}">`);
     if (image) parts.push(`<meta name="twitter:image" content="${esc(image)}">`);
   }
@@ -174,7 +186,7 @@ export function buildHead(options = {}) {
   // JSON-LD injection
   const ldItems = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
   for (const ld of ldItems) {
-    parts.push(`<script type="application/ld+json">${JSON.stringify(ld)}</script>`);
+    parts.push(`<script type="application/ld+json">${ldJson(ld)}</script>`);
   }
 
   return parts.join('\n');
@@ -196,6 +208,47 @@ export function buildHead(options = {}) {
  * const result = injectHead(doc, head);
  * // Old <title> removed, new head tags injected before </head>
  */
+/**
+ * Serialise JSON-LD for inline embedding.
+ *
+ * `<` is escaped rather than left raw: a `</script>` appearing anywhere inside a
+ * string value — a description quoting some markup, a title with a tag in it —
+ * closes the block early and drops the rest of the page's structured data on the
+ * floor, or worse. `\u003c` is the same character to a JSON parser.
+ *
+ * @param {Object} ld - The JSON-LD object.
+ * @returns {string} JSON safe to place between `<script>` tags.
+ */
+export function ldJson(ld) {
+  return JSON.stringify(ld).replace(/</g, '\\u003c');
+}
+
+/**
+ * Build a BreadcrumbList JSON-LD object.
+ *
+ * Items are in trail order, outermost first. An item with no `url` emits no
+ * `item` property — which is what you want for the last crumb, the page the
+ * visitor is already on.
+ *
+ * @param {Array<{name: string, url?: string}>} [items=[]] - The trail.
+ * @returns {Object} A JSON-LD BreadcrumbList.
+ *
+ * @example
+ * breadcrumbList([{ name: 'Home', url: '/' }, { name: 'Docs', url: '/docs' }, { name: 'Install' }]);
+ */
+export function breadcrumbList(items = []) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: item.name,
+      ...(item.url ? { item: item.url } : {}),
+    })),
+  };
+}
+
 export function injectHead(html, headHtml) {
   let result = html.replace(/<title>[^<]*<\/title>/, '');
   return result.replace('</head>', headHtml + '\n</head>');

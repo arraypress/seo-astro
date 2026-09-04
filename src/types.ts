@@ -5,7 +5,7 @@ import type { BuildHeadOptions } from './core.js';
 
 /**
  * Props for `<SEO />` — identical to `buildHead()`'s options:
- * `title`, `description`, `url`, `image`, `type`, `robots`, `siteName`,
+ * `title`, `titleTemplate`, `description`, `url`, `image`, `type`, `robots`, `siteName`,
  * `twitterCard`/`twitterSite`/`twitterCreator`, `locale`,
  * `articlePublished`/`articleModified`/`articleAuthor`, `verification`,
  * `hreflang`, and `jsonLd`.

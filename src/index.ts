@@ -15,8 +15,9 @@
  */
 
 import SEO from './SEO.astro';
+import Breadcrumbs from './Breadcrumbs.astro';
 
-export { SEO };
+export { SEO, Breadcrumbs };
 export type * from './types';
 export default SEO;
 
@@ -28,5 +29,5 @@ export default SEO;
  * these, every consumer would have to depend on @arraypress/seo as well —
  * two packages, two version ranges, for one concern.
  */
-export { buildHead, injectHead, robotsTxt, canonicalize, escapeHtml } from './core.js';
-export type { BuildHeadOptions, RobotsTxtOptions } from './core.js';
+export { buildHead, injectHead, robotsTxt, canonicalize, escapeHtml, breadcrumbList, ldJson } from './core.js';
+export type { BuildHeadOptions, RobotsTxtOptions, BreadcrumbItem } from './core.js';
