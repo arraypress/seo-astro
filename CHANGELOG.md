@@ -5,6 +5,38 @@ All notable changes to `@arraypress/seo-astro` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] — Unreleased
+
+### Fixed
+
+- **The canonical check treated deduplication as an error.** `canonical-mismatch`
+  fired whenever a page's canonical named a different page — but that is the
+  normal, correct way to handle two URLs for one thing, not a mistake. Run
+  against a real 1,413-page site it reported **373 errors and 373 orphans that
+  were all wrong**, on pages that were deduplicated exactly as they should be.
+
+  A check that is wrong that often is worse than no check: it buries the 56
+  findings that were real.
+
+### Changed
+
+- `canonical-mismatch` is replaced by three checks that distinguish the cases:
+  - `canonical-off-site` (error) — points at another origin.
+  - `canonical-broken` (error) — points at a page that isn't in the build.
+  - `canonical-chain` (error) — points at a page that itself canonicalises
+    somewhere else. Google follows one hop, so a chain silently loses the end
+    of it.
+
+  A canonical naming another page that exists and is self-canonical is a
+  correct dedup pair, and is now **silent**.
+
+- Pages that canonicalise elsewhere are excluded from `title-duplicate`,
+  `description-duplicate` and `orphan-page`. A deduplicated page is *meant* to
+  share its title with its canonical and *meant* not to be linked; reporting
+  both was the same bug seen from two other angles.
+
+  Anyone who set `checks: { 'canonical-mismatch': … }` should use the new names.
+
 ## [2.2.1] — Unreleased
 
 ### Fixed

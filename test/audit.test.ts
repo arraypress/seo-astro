@@ -139,22 +139,13 @@ describe('per-page checks', () => {
 		expect(checksFor([page({ canonical: null })])).toContain('canonical-missing');
 	});
 
-	it('flags a canonical pointing at another page', () => {
-		const finding = run([page({ path: '/a/index.html', canonical: `${SITE}/b` })]).findings.find(
-			(f) => f.check === 'canonical-mismatch',
-		);
-		expect(finding?.message).toContain('/b');
-		expect(finding?.level).toBe('error');
-	});
-
 	it('flags a canonical pointing off-site', () => {
-		expect(checksFor([page({ canonical: 'https://elsewhere.com/a' })])).toContain('canonical-mismatch');
+		expect(checksFor([page({ canonical: 'https://elsewhere.com/a' })])).toContain('canonical-off-site');
 	});
 
 	it('accepts equivalent canonical spellings', () => {
-		expect(checksFor([page({ path: '/a/index.html', canonical: `${SITE}/a/` })])).not.toContain(
-			'canonical-mismatch',
-		);
+		const found = checksFor([page({ path: '/a/index.html', canonical: `${SITE}/a/` })]);
+		expect(found.filter((c) => c.startsWith('canonical-'))).toEqual([]);
 	});
 
 	it('flags an incomplete Open Graph set, naming the missing properties', () => {
@@ -193,6 +184,62 @@ describe('noindex pages', () => {
 		const found = checksFor([page({ path: '/index.html', title: 'Same title here' }), { ...noindexed, html: noindexed.html.replace(/<title>[^<]*<\/title>/, '<title>Same title here</title>') }]);
 		expect(found).not.toContain('title-duplicate');
 		expect(found).not.toContain('orphan-page');
+	});
+});
+
+/* Deduplication — two URLs for one thing, one canonical — is the normal way to
+ * handle equivalent pages, not a mistake. Flagging it was this check's original
+ * bug: a real site with 373 correctly-deduplicated pairing pages reported 373
+ * errors and 373 orphans, all of them wrong. */
+describe('canonical deduplication', () => {
+	// The site links to the canonical spelling; /a-b exists only to be redirected
+	// by rel=canonical, which is exactly why nothing links to it.
+	const pair = () => [
+		page({ path: '/index.html', links: ['/b-a'] }),
+		page({ path: '/a-b/index.html', title: 'Pairing A and B', canonical: `${SITE}/b-a` }),
+		page({ path: '/b-a/index.html', title: 'Pairing A and B', canonical: `${SITE}/b-a` }),
+	];
+
+	it('says nothing when the target exists and is self-canonical', () => {
+		const found = checksFor(pair());
+		expect(found.filter((c) => c.startsWith('canonical-'))).toEqual([]);
+	});
+
+	it('does not call a deduplicated page an orphan', () => {
+		// Nothing links to /a-b by design — it's reached at its canonical.
+		expect(checksFor(pair())).not.toContain('orphan-page');
+	});
+
+	it('does not call a deduplicated page a duplicate title', () => {
+		expect(checksFor(pair())).not.toContain('title-duplicate');
+	});
+
+	it('still flags a duplicate title between two self-canonical pages', () => {
+		const found = checksFor([
+			page({ path: '/index.html', title: 'Shared title text', links: ['/a'] }),
+			page({ path: '/a/index.html', title: 'Shared title text' }),
+		]);
+		expect(found).toContain('title-duplicate');
+	});
+
+	it('flags a canonical pointing at a page that is not in the build', () => {
+		const finding = run([
+			page({ path: '/index.html', links: ['/a'] }),
+			page({ path: '/a/index.html', canonical: `${SITE}/nowhere` }),
+		]).findings.find((f) => f.check === 'canonical-broken');
+		expect(finding?.message).toContain('/nowhere');
+		expect(finding?.level).toBe('error');
+	});
+
+	it('flags a canonical chain, which Google will not follow twice', () => {
+		const finding = run([
+			page({ path: '/index.html', links: ['/a', '/b', '/c'] }),
+			page({ path: '/a/index.html', canonical: `${SITE}/b` }),
+			page({ path: '/b/index.html', canonical: `${SITE}/c` }),
+			page({ path: '/c/index.html' }),
+		]).findings.find((f) => f.check === 'canonical-chain');
+		expect(finding?.path).toBe('/a');
+		expect(finding?.message).toContain('/c');
 	});
 });
 

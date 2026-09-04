@@ -143,7 +143,9 @@ export const CHECKS = {
   'description-long': 'warn',
   'description-short': 'warn',
   'canonical-missing': 'warn',
-  'canonical-mismatch': 'error',
+  'canonical-off-site': 'error',
+  'canonical-broken': 'error',
+  'canonical-chain': 'error',
   'og-incomplete': 'warn',
   'h1-missing': 'warn',
   'h1-multiple': 'warn',
@@ -210,12 +212,14 @@ export function auditPages(pages = [], options = {}) {
     // applies — flagging it would train people to ignore the output.
     if (!noindex) {
       if (!read.canonical) add('canonical-missing', path, 'No canonical link.');
-      else if (o.site) {
-        const canonical = linkTarget(read.canonical, path, o.site);
-        if (canonical === null)
-          add('canonical-mismatch', path, `Canonical points off-site: ${read.canonical}`);
-        else if (canonical !== path)
-          add('canonical-mismatch', path, `Canonical points at ${canonical}, not ${path}.`);
+      else {
+        const target = linkTarget(read.canonical, path, o.site);
+        if (target === null)
+          add('canonical-off-site', path, `Canonical points off-site: ${read.canonical}`);
+        // A canonical pointing at another page is deduplication, not an error,
+        // and whether it's correct depends on the target — so it's judged in
+        // the set pass below, once every page is known.
+        else seen[seen.length - 1].canonicalPath = target;
       }
 
       // https://ogp.me — "The four required properties for every page are:
@@ -239,11 +243,36 @@ export function auditPages(pages = [], options = {}) {
 
   // ── Set-level checks: these are the ones a per-page editor plugin can't do ──
 
+  const byPath = new Map(seen.map((p) => [p.path, p]));
+
+  /* A page whose canonical names a different page is a deliberate duplicate —
+   * two spellings of one thing, kept because both URLs get linked to. It is
+   * meant to share its title with the target and is meant not to be linked, so
+   * excluding it from the duplicate and orphan checks is what stops those
+   * checks firing on every correctly-deduplicated page on the site. */
+  const isDeduped = (p) => p.canonicalPath && p.canonicalPath !== p.path;
+
+  for (const p of seen) {
+    if (!isDeduped(p)) continue;
+    const target = byPath.get(p.canonicalPath);
+    if (!target) {
+      add('canonical-broken', p.path, `Canonical points at ${p.canonicalPath}, which isn't in the build.`);
+    } else if (isDeduped(target)) {
+      // A → B → C. Google follows one hop, so the chain silently loses C.
+      add(
+        'canonical-chain',
+        p.path,
+        `Canonical points at ${p.canonicalPath}, which itself canonicalises to ${target.canonicalPath}.`,
+      );
+    }
+    // Otherwise the target exists and is self-canonical — a correct dedup pair.
+  }
+
   const dupes = (field, check, label) => {
     const groups = new Map();
     for (const p of seen) {
       const value = p.read[field];
-      if (!value || p.noindex) continue;
+      if (!value || p.noindex || isDeduped(p)) continue;
       if (!groups.has(value)) groups.set(value, []);
       groups.get(value).push(p.path);
     }
@@ -265,9 +294,10 @@ export function auditPages(pages = [], options = {}) {
       }
     }
     for (const p of seen) {
-      // The homepage is reached without a link, and a noindex page is meant to
-      // be unreachable — neither is an orphan in the sense that matters.
-      if (p.path === '/' || p.noindex) continue;
+      // The homepage is reached without a link, a noindex page is meant to be
+      // unreachable, and a deduplicated page is meant to be reached at its
+      // canonical instead — none is an orphan in the sense that matters.
+      if (p.path === '/' || p.noindex || isDeduped(p)) continue;
       if (!linked.has(p.path)) add('orphan-page', p.path, 'No internal link points at this page.');
     }
   }

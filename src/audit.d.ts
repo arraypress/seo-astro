@@ -4,7 +4,7 @@ export type CheckLevel = 'error' | 'warn' | false;
 export type CheckName =
   | 'title-missing' | 'title-duplicate' | 'title-long' | 'title-short'
   | 'description-missing' | 'description-duplicate' | 'description-long' | 'description-short'
-  | 'canonical-missing' | 'canonical-mismatch'
+  | 'canonical-missing' | 'canonical-off-site' | 'canonical-broken' | 'canonical-chain'
   | 'og-incomplete'
   | 'h1-missing' | 'h1-multiple'
   | 'image-alt-missing'

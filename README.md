@@ -118,7 +118,9 @@ build on an error:
 | `description-missing` / `description-duplicate` | warn | |
 | `description-long` / `description-short` | warn | |
 | `canonical-missing` | warn | |
-| `canonical-mismatch` | error | canonical points at another page, or off-site |
+| `canonical-off-site` | error | canonical points at another origin |
+| `canonical-broken` | error | canonical points at a page not in the build |
+| `canonical-chain` | error | canonical target itself canonicalises elsewhere |
 | `og-incomplete` | warn | [ogp.me](https://ogp.me)'s four required properties |
 | `h1-missing` / `h1-multiple` | warn | |
 | `image-alt-missing` | warn | `alt=""` counts as present |
@@ -135,6 +137,12 @@ seoAudit({
   failOn: 'warn',
 })
 ```
+
+**On canonicals:** a page whose canonical names a *different* page is
+deduplication — two URLs for one thing — and is not reported, provided the
+target exists and is self-canonical. Such pages are also excluded from the
+duplicate-title and orphan checks, since they are meant to share a title with
+their canonical and meant not to be linked.
 
 **Duplicate titles and orphan pages are why this runs over the build**, not per
 page: they're properties of the whole site, and no editor-time checker can see

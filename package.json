@@ -1,6 +1,6 @@
 {
   "name": "@arraypress/seo-astro",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "SEO for Astro — an idiomatic <SEO> component, a Breadcrumbs component, a build-time SEO audit integration, and the head/robots.txt builders behind them. Title, canonical, Open Graph, Twitter, robots, hreflang and JSON-LD. Zero dependencies.",
   "type": "module",
   "files": [
