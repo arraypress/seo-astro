@@ -29,6 +29,12 @@ export interface AuditOptions {
   minDescriptionLength?: number;
   /** Site URL — lets the audit tell internal links from external, and check canonicals. */
   site?: string;
+  /**
+   * Leave `noindex` pages out of the per-page checks (lengths, h1, alt text,
+   * the `noindex` warning itself). Their links still count towards orphans,
+   * and they're listed in `skipped`. @default true
+   */
+  skipNoindex?: boolean;
   /** Paths to skip. Strings are matched as normalised paths; RegExps are tested against them. */
   ignore?: Array<string | RegExp>;
   /** Per-check severity override, or `false` to switch one off. */
@@ -37,7 +43,10 @@ export interface AuditOptions {
 
 export interface AuditResult {
   findings: Finding[];
+  /** Pages audited. */
   checked: number;
+  /** Noindex pages left out by `skipNoindex`. */
+  skipped: string[];
   errors: number;
   warnings: number;
 }

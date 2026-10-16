@@ -16,6 +16,8 @@ export interface HeadConfig {
         width: number;
         height: number;
         eyebrow?: string;
+        /** The card footer's name, taken off headlines like the site's name. */
+        wordmark?: string;
       };
 }
 

@@ -169,19 +169,39 @@ describe('per-page checks', () => {
 
 describe('noindex pages', () => {
 	const noindexed = page({ path: '/private/index.html', robots: 'noindex, nofollow', canonical: null, og: false });
+	// Everything a page can get wrong on its own, on a page kept out of search on purpose.
+	const untidy = page({ path: '/thanks/index.html', robots: 'noindex', title: 'Thanks', description: 'Short.', h1: 0, body: '<img src="/a.png">' });
 
-	it('are reported as excluded from search', () => {
-		expect(checksFor([noindexed])).toContain('noindex');
+	it('are left out of the per-page checks by default, and listed as skipped', () => {
+		const result = run([page(), untidy]);
+		expect(result.findings).toEqual([]);
+		expect(result.skipped).toEqual(['/thanks']);
+		expect(result.checked).toBe(1);
+	});
+
+	it('still count as linking to other pages', () => {
+		const linker = page({ path: '/thanks/index.html', robots: 'noindex', links: ['/only-from-thanks'] });
+		const found = checksFor([page(), linker, page({ path: '/only-from-thanks/index.html' })]);
+		expect(found).not.toContain('orphan-page');
+	});
+
+	it('get every check, and a noindex warning, with skipNoindex: false', () => {
+		const found = checksFor([untidy], { skipNoindex: false });
+		expect(found).toEqual(expect.arrayContaining(['noindex', 'title-short', 'description-short', 'h1-missing', 'image-alt-missing']));
+	});
+
+	it('are reported as excluded from search with skipNoindex: false', () => {
+		expect(checksFor([noindexed], { skipNoindex: false })).toContain('noindex');
 	});
 
 	it('are exempt from the canonical and Open Graph checks', () => {
-		const found = checksFor([noindexed]);
+		const found = checksFor([noindexed], { skipNoindex: false });
 		expect(found).not.toContain('canonical-missing');
 		expect(found).not.toContain('og-incomplete');
 	});
 
 	it('do not count as duplicates or orphans', () => {
-		const found = checksFor([page({ path: '/index.html', title: 'Same title here' }), { ...noindexed, html: noindexed.html.replace(/<title>[^<]*<\/title>/, '<title>Same title here</title>') }]);
+		const found = checksFor([page({ path: '/index.html', title: 'Same title here' }), { ...noindexed, html: noindexed.html.replace(/<title>[^<]*<\/title>/, '<title>Same title here</title>') }], { skipNoindex: false });
 		expect(found).not.toContain('title-duplicate');
 		expect(found).not.toContain('orphan-page');
 	});

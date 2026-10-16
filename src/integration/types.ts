@@ -29,9 +29,13 @@ export interface OgOptions {
 	logo?: string | Uint8Array;
 	/** Card colours: `bg`, `cardBg`, `accent`, `text`, `textSoft`, `muted`, `border`. */
 	colors?: Partial<Record<'bg' | 'cardBg' | 'accent' | 'text' | 'textSoft' | 'muted' | 'border', string>>;
-	/** Footer text. @default `defaults.siteName`, else the site's host */
+	/** Footer text. @default `defaults.siteName`, else the brand's host (see `domain`) */
 	wordmark?: string;
-	/** Footer-right text. `false` for none. @default the site's host */
+	/**
+	 * Footer-right text. `false` for none. @default the host of the `url` on the
+	 * site-wide Organization (else Person, else WebSite) in `jsonLd`, else of
+	 * Astro's `site`; without `www.`
+	 */
 	domain?: string | false;
 	/** Tile text when there's no artwork. */
 	initials?: string;

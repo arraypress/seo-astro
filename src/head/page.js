@@ -11,7 +11,7 @@
 import { buildGraph } from '@arraypress/jsonld';
 import { absUrl } from '@arraypress/site-url';
 import { buildHead, canonicalize } from '../core.js';
-import { ogFile, ogMarker } from '../og/marker.js';
+import { cardUrl, ogFile, ogMarker } from '../og/marker.js';
 import { cardTitle } from '../og/title.js';
 
 /**
@@ -36,7 +36,7 @@ const list = (value) => (Array.isArray(value) ? value : value ? [value] : []);
  * @param {Object|Object[]} [page] - The page's nodes.
  * @param {Object} graph - Where the page is.
  * @param {string} graph.url - The page's canonical URL.
- * @param {string} [graph.origin] - The site's origin.
+ * @param {string} [graph.origin] - The site's root URL, `https://example.com/`.
  * @returns {Object|Object[]|undefined} What to pass `buildHead()` as `jsonLd`.
  */
 function jsonLdFor(site, page, { url, origin }) {
@@ -58,11 +58,13 @@ function jsonLdFor(site, page, { url, origin }) {
  *   build what to draw. `og={false}` opts a page out; `og={{ … }}` changes
  *   what the card says. The card's headline is the title without the site's
  *   name, which the card's footer already shows.
+ * - Site-wide JSON-LD nodes are keyed on the site's root, so the Organization
+ *   is `https://example.com/#organization` on every page.
  *
  * @param {Object} [props={}] - The `<SEO />` props.
  * @param {Object} context - Where the page is.
  * @param {Object} [context.config={}] - The integration's config: `defaults`,
- *   `jsonLd`, and `og` (`false`, or `{ dir, base, width, height, eyebrow }`).
+ *   `jsonLd`, and `og` (`false`, or `{ dir, base, width, height, eyebrow, wordmark }`).
  * @param {URL} context.url - The page URL (`Astro.url`).
  * @param {URL|string} [context.site] - The site URL (`Astro.site`).
  * @returns {string} The head HTML, the OG marker after it when there is one.
@@ -77,7 +79,7 @@ export function pageHead(props = {}, { config = {}, url, site }) {
     options.image = absUrl(options.image, site, url);
   } else if (config.og && card !== false) {
     const content = {
-      title: card?.title ?? cardTitle(options.title, options),
+      title: card?.title ?? cardTitle(options.title, { ...options, wordmark: config.og.wordmark }),
       subtitle: card?.subtitle ?? options.description,
       eyebrow: card?.eyebrow ?? config.og.eyebrow,
       chips: card?.chips,
@@ -85,16 +87,16 @@ export function pageHead(props = {}, { config = {}, url, site }) {
     };
     // Satori needs a title; a page without one gets no card rather than a blank one.
     if (content.title) {
-      const { file, path } = ogFile(url.pathname, config.og);
-      options.image = absUrl(path, site, url);
+      options.image = cardUrl(url, config.og, site);
       options.imageWidth ??= config.og.width;
       options.imageHeight ??= config.og.height;
       options.imageAlt ??= content.title;
-      marker = ogMarker(file, content);
+      marker = ogMarker(ogFile(url.pathname, config.og).file, content);
     }
   }
 
-  const origin = site ? new URL(String(site)).origin : undefined;
+  // The root with its slash: `https://example.com/#organization`, not `…com#organization`.
+  const origin = site ? new URL('/', String(site)).href : undefined;
   const jsonLd = jsonLdFor(config.jsonLd, options.jsonLd, { url: canonical, origin });
   const head = buildHead({ ...options, url: canonical, jsonLd });
   return marker ? `${head}\n${marker}` : head;

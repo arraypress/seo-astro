@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ogFile, ogMarker, takeMarkers } from '../../src/og/marker.js';
+import { cardUrl, ogFile, ogMarker, takeMarkers } from '../../src/og/marker.js';
 
 describe('ogFile', () => {
 	it.each([
@@ -22,6 +22,25 @@ describe('ogFile', () => {
 
 	it('strips the base from the file and keeps it on the URL', () => {
 		expect(ogFile('/docs/', { base: '/docs/' })).toEqual({ file: 'og/index.png', path: '/docs/og/index.png' });
+	});
+});
+
+describe('cardUrl', () => {
+	it("gives a page's card as an absolute URL", () => {
+		expect(cardUrl(new URL('https://example.com/blog/hello/'))).toBe('https://example.com/og/blog/hello.png');
+		expect(cardUrl('/blog/hello/', {}, 'https://example.com')).toBe('https://example.com/og/blog/hello.png');
+	});
+
+	it("prefers the site to the page's own origin", () => {
+		expect(cardUrl(new URL('http://localhost:4321/'), {}, 'https://example.com')).toBe('https://example.com/og/index.png');
+	});
+
+	it('keeps the base and the folder', () => {
+		expect(cardUrl('/docs/start', { base: '/docs', dir: 'cards' }, 'https://example.com')).toBe('https://example.com/docs/cards/start.png');
+	});
+
+	it('gives a path for a path with no site', () => {
+		expect(cardUrl('/a/')).toBe('/og/a.png');
 	});
 });
 

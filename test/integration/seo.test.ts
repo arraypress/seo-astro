@@ -33,7 +33,7 @@ function logger() {
  * Run the integration the way Astro would: set up, read back the config it
  * gives `<SEO />`, render `pages` with it, then finish the build.
  */
-async function build(options: SeoOptions, pages: Record<string, { title: string; description?: string; body?: string }>) {
+async function build(options: SeoOptions, pages: Record<string, { title: string; description?: string; body?: string; robots?: string }>) {
 	const integration = seo(options);
 	const hooks = integration.hooks as Record<string, (arg: unknown) => unknown>;
 	const plugins: Array<{ resolveId: (id: string) => string | undefined; load: (id: string) => string | undefined }> = [];
@@ -84,8 +84,21 @@ describe('seo()', () => {
 		expect(head).toEqual({
 			defaults: { siteName: 'Acme' },
 			jsonLd: { '@type': 'Organization', url: SITE },
-			og: { dir: 'og', base: '/', width: 1200, height: 630, eyebrow: 'Acme' },
+			og: { dir: 'og', base: '/', width: 1200, height: 630, eyebrow: 'Acme', wordmark: 'Acme' },
 		});
+	});
+
+	it("names the card's footer after the site, or the brand's host", async () => {
+		expect((await build({ og: { tile: 'none' } }, {})).og).toMatchObject({ wordmark: 'example.com' });
+		const org = { '@type': 'Organization', url: 'https://www.acme.co.uk/' };
+		expect((await build({ jsonLd: org }, {})).og).toMatchObject({ wordmark: 'acme.co.uk' });
+	});
+
+	it('says once which noindex pages it left out of the audit', async () => {
+		const pages = { ...PAGES, '/thanks': { title: 'Thanks', robots: 'noindex' } };
+		await build({ og: false }, pages);
+		expect(logs.info).toContain('1 noindex page(s) not audited: /thanks');
+		expect(logs.warn.filter((m) => m.startsWith('/thanks'))).toEqual([]);
 	});
 
 	it('renders the cards, writes llms.txt and _headers, and audits the build', async () => {

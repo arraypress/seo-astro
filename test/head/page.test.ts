@@ -66,6 +66,11 @@ describe('pageHead — generated cards', () => {
 		expect(html).toContain('<meta property="og:image:alt" content="Open source">');
 	});
 
+	it("takes the card's wordmark off the headline too", () => {
+		const html = head({ title: 'Docs — Relay' }, { og: { ...OG, wordmark: 'Relay' }, defaults: { siteName: 'Relay Inc.' } });
+		expect(takeMarkers(html).cards[0].card.title).toBe('Docs');
+	});
+
 	it("keeps an og.title as it is, site name and all", () => {
 		const html = head({ title: 'Hello — Example', og: { title: 'Hello — Example' } }, { og: OG, defaults: { siteName: 'Example' } });
 		expect(takeMarkers(html).cards[0].card.title).toBe('Hello — Example');
@@ -113,8 +118,14 @@ describe('pageHead — JSON-LD', () => {
 		const [graph] = ld(head({ title: 'X', jsonLd: article }, { jsonLd: org }));
 		expect(graph['@context']).toBe('https://schema.org');
 		const [o, a] = graph['@graph'];
-		expect(o['@id']).toBe('https://example.com#organization');
+		expect(o['@id']).toBe('https://example.com/#organization');
 		expect(a.publisher).toEqual({ '@id': o['@id'] });
+	});
+
+	it("keys the site's nodes on its root, with the slash before the #", () => {
+		const blog = { '@context': 'https://schema.org', '@type': 'WebSite', name: 'Acme' };
+		const [graph] = ld(pageHead({ title: 'X', jsonLd: blog }, { config: { jsonLd: { '@type': 'Organization', name: 'Acme' } }, url: new URL(`${SITE}/docs/x`), site: `${SITE}/docs/` }));
+		expect(graph['@graph'].map((n: { '@id': string }) => n['@id'])).toEqual(['https://example.com/#organization', 'https://example.com/#website']);
 	});
 
 	it('leaves a graph the page built itself alone', () => {

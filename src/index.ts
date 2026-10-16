@@ -20,6 +20,9 @@ import SEO from './SEO.astro';
 import Breadcrumbs from './Breadcrumbs.astro';
 
 export { SEO, Breadcrumbs };
+
+/** The URL of the card `seo()` renders for a page, for a BlogPosting's `image` and the like. */
+export { ogImageFor } from './og/image-for';
 export type * from './types';
 export default SEO;
 

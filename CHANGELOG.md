@@ -33,8 +33,9 @@ llms.txt, security headers and the audit.
 - **A card's headline drops the site's name.** "Pricing — Acme" is right for
   the tab and the results page, but the card shows Acme in its footer, so the
   headline is "Pricing": the `titleTemplate`'s own text comes off, else the
-  `siteName` at either end with whatever joins it. `og.title` is used as
-  given.
+  `siteName` at either end with whatever joins it (" — Acme", " | Acme",
+  "Acme — ", "Acme | "…), else the card's `wordmark` the same way.
+  `og.title` is used as given.
 - **Cards in the site's own light and type.** `seo({ og })` passes
   og-image's `backdrop` (colour glows and a film grain), `stripe`,
   `fontFamily` and `displayFontFamily` through, and they're part of the cache
@@ -63,6 +64,35 @@ llms.txt, security headers and the audit.
   `buildFull`, `parse` and `llmsTxtResponse` builders — for content a config
   can't reach, such as a content collection.
 - `readPage()` reads `og:site_name`.
+- **`ogImageFor(page, site?)`**, from the main entry: the URL of the card
+  `seo()` renders for a page, by the same rule `<SEO />` uses, for a
+  BlogPosting's or Product's `image`. Layouts were copying the
+  `/og/<path>.png` naming to get it. `undefined` when cards are off.
+- **The audit leaves noindex pages out** of its per-page checks
+  (`audit: { skipNoindex: true }`, the default). A page kept out of search
+  on purpose was reported for its title length, its missing `<h1>` and its
+  being noindex, on every build. Its links still count for the orphan check,
+  and the build names the pages it skipped in one line. `skipNoindex: false`
+  audits them as before. `auditPages()` returns them as `skipped`.
+- **The card's domain is the brand's.** With no `og.domain`, the footer shows
+  the host of the site-wide Organization's `url` in `jsonLd` (else a
+  Person's, else the WebSite's), and only then Astro's `site`, so a demo or
+  staging deploy still shows the brand's own host. `www.` comes off.
+- **WebP and AVIF artwork** reaches the card: og-image converts it through
+  `sharp` when it's installed. A card the renderer warned about (no sharp, an
+  unreadable image) is passed to the build log and isn't cached.
+
+### Fixed
+
+- **The site-wide JSON-LD `@id`s had no `/` before the `#`**:
+  `https://example.com#organization`. They're keyed on the site's root now,
+  `https://example.com/#organization`, the form every other tool writes.
+- A code sample quoted in an attribute (`data-code="<script>…"`,
+  `onplay={…}` in a snippet) no longer adds a script hash to the CSP or an
+  inline-handler warning: security-headers' scan reads each tag whole. Its
+  `data-csp` takes schemes too (`media-src blob:`).
+- The card cache was keyed on og-image's entry file alone, so a change to
+  any of its other modules served stale cards. It reads them all.
 
 ### Changed
 

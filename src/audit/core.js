@@ -176,6 +176,7 @@ const DEFAULTS = {
   maxDescriptionLength: 155,
   minDescriptionLength: 50,
   site: undefined,
+  skipNoindex: true,
   ignore: [],
   checks: {},
   failOn: 'error',
@@ -213,9 +214,15 @@ export const CHECKS = {
  * @param {number} [options.maxDescriptionLength=155] - Heuristic, like the title's.
  * @param {number} [options.minDescriptionLength=50] - Shorter descriptions are reported.
  * @param {string} [options.site] - Site URL, used to tell internal links from external ones.
+ * @param {boolean} [options.skipNoindex=true] - Leave `noindex` pages out of
+ *   the per-page checks: a page kept out of search on purpose (a thank-you
+ *   page, a search page, a draft) has no title to tune and no reason to be
+ *   linked. Their paths are returned as `skipped`; their links still count.
+ *   `false` audits them like any page, with a `noindex` warning each.
  * @param {Array<string|RegExp>} [options.ignore=[]] - Paths to skip entirely.
  * @param {Object<string, string|false>} [options.checks={}] - Per-check level override, or `false` to disable.
- * @returns {{findings: Array<Object>, checked: number, errors: number, warnings: number}}
+ * @returns {{findings: Array<Object>, checked: number, skipped: string[], errors: number, warnings: number}}
+ *   `checked` counts the pages audited; `skipped` lists the noindex pages that weren't.
  */
 export function auditPages(pages = [], options = {}) {
   const o = { ...DEFAULTS, ...options };
@@ -245,12 +252,18 @@ export function auditPages(pages = [], options = {}) {
   };
 
   const seen = [];
+  const skipped = [];
   for (const page of pages) {
     const path = normalizePath(page.path);
     if (skip(path)) continue;
     const read = readPage(page.html);
     const noindex = /\bnoindex\b/i.test(read.robots ?? '');
+    // Kept for the set checks either way: its links still reach other pages.
     seen.push({ path, read, noindex });
+    if (noindex && o.skipNoindex) {
+      skipped.push(path);
+      continue;
+    }
 
     if (noindex) add('noindex', path, 'Excluded from search results by its robots directive.');
 
@@ -382,5 +395,5 @@ export function auditPages(pages = [], options = {}) {
 
   const errors = findings.filter((f) => f.level === 'error').length;
   const warnings = findings.filter((f) => f.level === 'warn').length;
-  return { findings, checked: seen.length, errors, warnings };
+  return { findings, checked: seen.length - skipped.length, skipped, errors, warnings };
 }

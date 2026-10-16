@@ -10,7 +10,8 @@ export interface OgCard {
   chips?: string[];
   /**
    * Image for the right-hand tile: a path in the built site (`/img/x.png`), an
-   * https URL or a `data:` URI. PNG, JPEG or SVG — Satori can't read WebP.
+   * https URL or a `data:` URI. PNG, JPEG, GIF or SVG; WebP and AVIF from the
+   * build are converted when `sharp` is installed.
    */
   artwork?: string;
 }
@@ -20,6 +21,9 @@ export const MARKER_ATTR: string;
 
 /** Where a page's card lives: its file in the build output, and its URL path. */
 export function ogFile(pathname: string, options?: { dir?: string; base?: string }): { file: string; path: string };
+
+/** The absolute URL of a page's card, from `Astro.url` or a path. */
+export function cardUrl(page: URL | string, options?: { dir?: string; base?: string }, site?: URL | string): string;
 
 /** The marker `<SEO />` writes into a page for the build step to find. */
 export function ogMarker(file: string, card: OgCard): string;

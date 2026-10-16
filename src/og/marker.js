@@ -13,6 +13,7 @@
  * @module @arraypress/seo-astro/og/marker
  */
 
+import { absUrl } from '@arraypress/site-url';
 import { escapeHtml, ldJson } from '../core.js';
 
 /** The attribute that marks the block, and carries the card's file path. */
@@ -50,6 +51,23 @@ export function ogFile(pathname, { dir = 'og', base = '/' } = {}) {
   const key = path.replace(/\.html?$/i, '').replace(/^\/+|\/+$/g, '') || 'index';
   const file = `${dir.replace(/^\/+|\/+$/g, '')}/${key}.png`;
   return { file, path: `${prefix}/${file}` };
+}
+
+/**
+ * The absolute URL of a page's card.
+ *
+ * @param {URL|string} page - The page: `Astro.url`, or its path.
+ * @param {Object} [options={}] - Where cards go: `dir` and `base`, as for {@link ogFile}.
+ * @param {URL|string} [site] - The site URL (`Astro.site`). Without it, a
+ *   `URL` page's own origin is used, and a path stays a path.
+ * @returns {string} e.g. `https://example.com/og/blog/hello.png`.
+ *
+ * @example
+ * cardUrl(new URL('https://example.com/blog/hello/')); // 'https://example.com/og/blog/hello.png'
+ */
+export function cardUrl(page, options = {}, site) {
+  const { path } = ogFile(page instanceof URL ? page.pathname : page, options);
+  return absUrl(path, site, page instanceof URL ? page : undefined);
 }
 
 /**

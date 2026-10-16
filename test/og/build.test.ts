@@ -12,6 +12,9 @@ vi.setConfig({ testTimeout: 60_000 });
 
 const LOGO = '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="96" height="96" fill="#fff"/></svg>';
 
+/** An 8×8 red WebP. */
+const WEBP = 'UklGRjwAAABXRUJQVlA4IDAAAADQAQCdASoIAAgAAUAmJaACdLoB+AADsAD+8ut//NgVzXPv9//S4P0uD9Lg/9KQAAA=';
+
 /** PNG width and height, from the IHDR chunk. */
 const size = (png: Buffer) => [png.readUInt32BE(16), png.readUInt32BE(20)];
 
@@ -104,6 +107,23 @@ describe('buildOgImages', () => {
 		await run();
 		expect(warnings[0]).toMatch(/og\/index\.png: artwork \/missing\.png isn't in the build/);
 		expect(readFileSync(join(root, 'og/index.png')).length).toBeGreaterThan(1000);
+	});
+
+	it('draws WebP artwork from the build, through sharp', async () => {
+		writeFileSync(join(root, 'cover.webp'), Buffer.from(WEBP, 'base64'));
+		page('index.html', 'og/index.png', { title: 'Home', artwork: '/cover.webp' });
+		await run();
+		expect(warnings).toEqual([]);
+		expect(size(readFileSync(join(root, 'og/index.png')))).toEqual([1200, 630]);
+	});
+
+	it("passes on the renderer's warnings, and doesn't cache a card that had one", async () => {
+		writeFileSync(join(root, 'cover.webp'), Buffer.from(WEBP, 'base64').subarray(0, 20));
+		page('index.html', 'og/index.png', { title: 'Home', artwork: '/cover.webp' });
+		expect((await run()).result.rendered).toBe(1);
+		expect(warnings[0]).toMatch(/^og\/index\.png: og-image: the artwork is WEBP/);
+		page('index.html', 'og/index.png', { title: 'Home', artwork: '/cover.webp' });
+		expect((await run()).result.rendered).toBe(1);
 	});
 
 	it('loads fonts by path', async () => {

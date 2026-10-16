@@ -96,8 +96,10 @@ so `article()`, `product()`, `faq()` and the rest come from the same import.
 When a page has more than one node — the site's and its own — `<SEO />` joins
 them into one `@graph` with `buildGraph()`, which gives each an `@id` and wires
 the references: the page's Article names the site's Organization as its
-publisher instead of standing beside it, unconnected. One node is emitted as
-it is, and a page that passes its own `@graph` is left alone.
+publisher instead of standing beside it, unconnected. The site's own nodes are
+keyed on its root, so the Organization is `https://example.com/#organization`
+on every page. One node is emitted as it is, and a page that passes its own
+`@graph` is left alone.
 
 ### `og` — a share card per page
 
@@ -124,15 +126,35 @@ A page changes what its card says with `og`, or opts out with `og={false}`:
 | `subtitle` | the page's `description` |
 | `eyebrow` | `og.eyebrow` from the config |
 | `chips` | — |
-| `artwork` | — a site path (`/img/x.png`, read from the build), an https URL or a `data:` URI; PNG, JPEG or SVG |
+| `artwork` | — a site path (`/img/x.png`, read from the build), an https URL or a `data:` URI; PNG, JPEG, GIF or SVG, and WebP or AVIF with `sharp` (below) |
 
 **The headline drops the site's name.** A title says "Pricing — Acme" for
 the tab and the results page, but the card shows Acme in its footer already.
 So the card takes the title without it: first by the `titleTemplate`'s own
 text, then by the `siteName` at either end with whatever joins it (` — `,
-` | `, ` · `, `: `…). `"Acme — Pricing"` and `"Pricing | Acme"` both give
-`Pricing`. A title that is only the name stays as it is, and `og.title` is
-used exactly as given.
+` | `, ` · `, `: `…), then by the card's `wordmark` the same way, for a site
+whose titles carry a shorter name than its `siteName`. `"Acme — Pricing"` and
+`"Pricing | Acme"` both give `Pricing`. A title that is only the name stays as
+it is, and `og.title` is used exactly as given, so pass one only when the card
+should say something different.
+
+**The card's URL, for structured data.** A BlogPosting or Product wants an
+`image` too, and the page's card is the natural one. `ogImageFor()` gives its
+URL by the same rule `<SEO />` uses, so a layout never copies it:
+
+```astro
+---
+import { SEO, ogImageFor } from '@arraypress/seo-astro';
+import { blogPosting } from '@arraypress/seo-astro/jsonld';
+
+const image = post.data.cover ?? ogImageFor(Astro.url, Astro.site);
+---
+<SEO title={post.data.title} type="article" jsonLd={blogPosting({ headline: post.data.title, url: Astro.url.href, image })} />
+```
+
+It takes `Astro.url` or a path, and gives `undefined` when cards are off. The
+card exists when that page's `<SEO />` draws one: a title, no `image`, and `og`
+not `false`.
 
 The brand is set once, in the config:
 
@@ -175,8 +197,8 @@ seo({
 |---|---|
 | `colors` | og-image's dark palette: `bg`, `cardBg`, `accent`, `text`, `textSoft`, `muted`, `border` |
 | `logo` | the wordmark's first letter — a path from the project root (PNG, JPEG or SVG), a URL, or bytes |
-| `wordmark` | `defaults.siteName`, else the site's host |
-| `domain` | the site's host; `false` for none |
+| `wordmark` | `defaults.siteName`, else the brand's host (as for `domain`) |
+| `domain` | the host of the site-wide Organization's `url` in `jsonLd` (else a Person's, else the WebSite's), else of Astro's `site`, without `www.`; `false` for none |
 | `fonts` | the bundled Inter — or `[{ path: 'fonts/Brand.woff', name: 'Brand', weight: 700 }]` (not woff2); `name` defaults to `Inter` |
 | `fontFamily` / `displayFontFamily` | `'Inter'` / `fontFamily` — the text's family, and the title's and wordmark's |
 | `backdrop` | two faint accent glows — `{ glows: [{ color, x, y, size, opacity }], grain }`, see og-image's README |
@@ -194,6 +216,21 @@ everything that changes the picture: the card, the options, the font, logo
 and artwork bytes, and the renderer itself. A rebuild renders only what
 changed, which on a site with a thousand pages is the difference between
 seconds and minutes. Cards no page asked for are dropped from the cache.
+
+**The domain is the brand's**, not necessarily the deploy's. A theme's demo
+or a staging host builds with a `site` that isn't where the brand lives; the
+Organization in `jsonLd` says where it does, so a site that sets its `url`
+needs no `domain`.
+
+**WebP and AVIF artwork** is converted through
+[`sharp`](https://sharp.pixelplumbing.com), which an Astro project that
+optimises images already has. Without it the build warns and the card is
+drawn without the artwork, rather than with an empty tile; a card that drew
+a warning isn't cached, so it's drawn properly once sharp is there.
+
+**Cards are saved as RGB PNGs** when they're opaque, which they are with any
+solid `colors.bg`: about 180 KB for a card with glows, where resvg's RGBA was
+over 300 KB.
 
 **In `astro dev`** the tags point at the card, but cards are only drawn by a
 build — `astro build && astro preview` to see them.
@@ -262,9 +299,11 @@ seo({
 Everything `@arraypress/security-headers` takes is accepted, plus `path`
 (default `'/*'`) and `filename` (default `'_headers'`). `csp: false` leaves
 the policy to something else, Astro's `security.csp` say. A `_headers` in
-`public/` is kept and appended to. Its README covers `data-csp`, for hosts a
-component only loads at runtime, and what to do about libraries that inject
-styles.
+`public/` is kept and appended to. Its README covers `data-csp`, for hosts or
+schemes (`media-src blob:`) a component only loads at runtime, and what to do
+about libraries that inject styles. Each tag is read whole, so a code sample
+quoted in an attribute (`data-code="<script>…"`) adds no hash and no handler
+warning.
 
 Vercel doesn't read `_headers`; turn this off there.
 
@@ -292,7 +331,7 @@ error:
 | `og-incomplete` | warn | [ogp.me](https://ogp.me)'s four required properties |
 | `h1-missing` / `h1-multiple` | warn | |
 | `image-alt-missing` | warn | `alt=""` counts as present |
-| `noindex` | warn | so an accidental one doesn't go unnoticed |
+| `noindex` | warn | with `skipNoindex: false` — see below |
 | `orphan-page` | warn | nothing links to it; the home and error pages never are |
 
 Tune anything:
@@ -307,6 +346,20 @@ seo({
   },
 })
 ```
+
+**Noindex pages are left out** of the per-page checks by default
+(`skipNoindex: true`). A page kept out of search on purpose — a thank-you
+page, the search page, a draft — has no title length to tune and no reason to
+be linked, and a warning for each of its quirks only trains people to ignore
+the output. Their links still count for the orphan check, and the build lists
+them once, so one that went noindex by mistake is still in the log:
+
+```
+[@arraypress/seo-astro] 3 noindex page(s) not audited: /search, /thanks, /wishlist
+```
+
+`skipNoindex: false` audits them like any other page, with a `noindex`
+warning on each.
 
 **On canonicals:** a page whose canonical names a *different* page is
 deduplication — two URLs for one thing — and is not reported, provided the
@@ -459,6 +512,10 @@ export const GET = ({ site }) =>
   `hsts: { includeSubDomains: true }` to keep it.
 - A card's headline no longer repeats the site's name. A page that passed
   `og.title` only to drop it can leave `og.title` out.
+- A layout that built `/og/<path>.png` itself for a BlogPosting's `image` can
+  use `ogImageFor(Astro.url, Astro.site)`.
+- A `domain` passed only because `site` isn't the brand's host can go when the
+  site's Organization has that `url`; the default also drops `www.`.
 - A hand-rolled OG endpoint or script goes: leave `image` off and the page gets
   a card. Move its colours, logo and fonts into `seo({ og })`.
 - `image` is made absolute against `site`. Pages that passed a relative path

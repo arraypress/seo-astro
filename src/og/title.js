@@ -41,11 +41,11 @@ function stripTemplate(title, template) {
 }
 
 /**
- * Take the site's name off either end of a title, with the separator that
- * joins it: `"Pricing — Acme"`, `"Pricing | Acme"`, `"Acme: Pricing"`.
+ * Take a name off either end of a title, with the separator that joins it:
+ * `"Pricing — Acme"`, `"Pricing | Acme"`, `"Acme — Pricing"`, `"Acme: Pricing"`.
  *
  * @param {string} title - The title.
- * @param {string|undefined} siteName - The site's name.
+ * @param {string|undefined} siteName - The name.
  * @returns {string|undefined} The rest, or undefined when the name isn't at
  *   either end (or the title is nothing but the name).
  */
@@ -62,12 +62,14 @@ function stripSiteName(title, siteName) {
  *
  * The title template's own text comes off first, as the surest sign of what
  * the site appends; failing that, the site's name and its separator at either
- * end. A title that is only the site's name stays as it is.
+ * end, then the card's wordmark the same way (the footer shows the wordmark,
+ * so it's the name that repeats). A title that is only the name stays as it is.
  *
  * @param {string|undefined} title - The page's `title`, as passed to `<SEO />`.
  * @param {Object} [site={}] - What the site adds to titles.
  * @param {string} [site.titleTemplate] - The `titleTemplate`, e.g. `'%s — Acme'`.
  * @param {string} [site.siteName] - The site's name, e.g. `'Acme'`.
+ * @param {string} [site.wordmark] - The card footer's name, when it differs.
  * @returns {string|undefined} The headline, or `title` as it came when there's
  *   nothing to take off.
  *
@@ -76,8 +78,8 @@ function stripSiteName(title, siteName) {
  * cardTitle('Acme | Pricing', { titleTemplate: 'Acme | %s' }); // 'Pricing'
  * cardTitle('Acme', { siteName: 'Acme' });                    // 'Acme'
  */
-export function cardTitle(title, { titleTemplate, siteName } = {}) {
+export function cardTitle(title, { titleTemplate, siteName, wordmark } = {}) {
   if (typeof title !== 'string') return title;
   const trimmed = title.trim();
-  return stripTemplate(trimmed, titleTemplate) ?? stripSiteName(trimmed, siteName) ?? title;
+  return stripTemplate(trimmed, titleTemplate) ?? stripSiteName(trimmed, siteName) ?? stripSiteName(trimmed, wordmark) ?? title;
 }

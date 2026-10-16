@@ -12,7 +12,10 @@
  * Cards are cached between builds, keyed on everything that changes the
  * picture: the card, the options, the font, logo and artwork bytes, and the
  * renderer's own source. A rebuild re-renders only what changed — the
- * difference between seconds and minutes on a site with a thousand pages.
+ * difference between seconds and minutes on a site with a thousand pages. A
+ * card the renderer warned about (WebP artwork with no sharp to convert it,
+ * say) isn't cached, so the warning comes back on every build until it's
+ * fixed, and the card is drawn properly once it is.
  *
  * @module @arraypress/seo-astro/og/build
  */
@@ -36,7 +39,7 @@ const OWN = new Set(['dir', 'eyebrow', 'cache', 'fonts', 'logo']);
  * use that runner, and closes the runner before the build hooks run.
  *
  * @returns {{renderOgImage: Function, source: string}} The render function,
- *   and the file it came from (for the cache key).
+ *   and its entry file (the cache key reads the files beside it).
  * @throws {Error} When `@arraypress/og-image` isn't installed, saying how to fix it.
  */
 export function loadRenderer() {
@@ -109,6 +112,19 @@ async function resolveArtwork(artwork, { root, base }) {
 }
 
 /**
+ * The renderer's source, every module of it, for the cache key: a change to
+ * any of them can change the picture.
+ *
+ * @param {string} entry - The renderer's entry file.
+ * @returns {Promise<Buffer[]>} The contents of the `.js` files beside it, by name.
+ */
+async function rendererSource(entry) {
+  const dir = dirname(entry);
+  const files = (await readdir(dir)).filter((name) => name.endsWith('.js')).sort();
+  return Promise.all(files.map((name) => readFile(join(dir, name))));
+}
+
+/**
  * A hash over strings and byte arrays.
  *
  * @param {Array<string|Uint8Array|undefined>} parts - What to hash, in order.
@@ -132,7 +148,8 @@ function hash(parts) {
  * @param {string} context.projectRoot - The Astro project root, for relative paths in `og`.
  * @param {string} [context.cacheDir] - Where cards are cached between builds.
  * @param {string} [context.base='/'] - Astro's `base`.
- * @param {{warn: Function}} context.logger - For artwork that can't be used.
+ * @param {{warn: Function}} context.logger - For artwork that can't be used,
+ *   and the renderer's own warnings.
  * @returns {Promise<{cards: number, rendered: number, reused: number}>} What was done.
  * @throws {Error} When the renderer is missing, or a card fails to render.
  */
@@ -155,7 +172,7 @@ export async function buildOgImages(pages, og, { root, projectRoot, cacheDir, ba
 
   const cache = og.cache !== false && cacheDir ? cacheDir : undefined;
   const optionsKey = hash([
-    await readFile(source),
+    ...(await rendererSource(source)),
     JSON.stringify({ ...options, fonts: undefined, logo: undefined }),
     ...(fonts ?? []).flatMap((f) => [`${f.name}/${f.weight}/${f.style}`, f.data]),
     logo,
@@ -179,14 +196,24 @@ export async function buildOgImages(pages, og, { root, projectRoot, cacheDir, ba
     }
 
     let png;
+    let warned = false;
+    /**
+     * Pass a renderer warning to the logger, naming the card.
+     *
+     * @param {string} message - What the renderer said.
+     */
+    const onWarning = (message) => {
+      warned = true;
+      logger.warn(`${file}: ${message}`);
+    };
     try {
-      png = await renderOgImage(input, options);
+      png = await renderOgImage(input, { ...options, onWarning });
     } catch (error) {
       throw new Error(`seo(): the OG card ${file} failed to render: ${error.message}`, { cause: error });
     }
     await writeFile(target, png);
     rendered++;
-    if (cache) {
+    if (cache && !warned) {
       await mkdir(cache, { recursive: true });
       await writeFile(join(cache, key), png);
     }

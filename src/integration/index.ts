@@ -31,6 +31,7 @@ import { reportAudit } from '../audit/report';
 import type { SeoAuditOptions } from '../audit/report';
 import type { HeadConfig } from '../head/page.js';
 import { writeLlms } from '../llms/write.js';
+import { cardBrand } from '../og/brand.js';
 import { buildOgImages, loadRenderer } from '../og/build.js';
 import { configModule } from './config-module';
 import { readPages } from './pages.js';
@@ -99,6 +100,7 @@ export default function seo(options: SeoOptions = {}): AstroIntegration {
 	let base = '/';
 	let projectRoot = '';
 	let cacheDir = '';
+	let brand: { wordmark?: string; domain?: string } = {};
 
 	return {
 		name: '@arraypress/seo-astro',
@@ -111,6 +113,7 @@ export default function seo(options: SeoOptions = {}): AstroIntegration {
 					typeof options.jsonLd === 'function'
 						? await options.jsonLd({ origin: originWithBase(config.site, config.base) })
 						: options.jsonLd;
+				if (og) brand = cardBrand(og, { siteName: defaults.siteName, jsonLd, site: config.site });
 				const head: HeadConfig = {
 					defaults,
 					jsonLd,
@@ -120,6 +123,7 @@ export default function seo(options: SeoOptions = {}): AstroIntegration {
 						width: og.width ?? OG_DEFAULTS.width,
 						height: og.height ?? OG_DEFAULTS.height,
 						eyebrow: og.eyebrow,
+						wordmark: brand.wordmark,
 					},
 				};
 				updateConfig({ vite: { plugins: [configModule(head)] } });
@@ -141,12 +145,7 @@ export default function seo(options: SeoOptions = {}): AstroIntegration {
 				const pages = await readPages(root);
 
 				if (og) {
-					const host = site ? new URL(site).host : undefined;
-					const settings = {
-						...og,
-						wordmark: og.wordmark ?? defaults.siteName ?? host,
-						domain: og.domain === false ? undefined : (og.domain ?? host),
-					};
+					const settings = { ...og, ...brand };
 					const { cards, rendered, reused } = await buildOgImages(pages, settings, {
 						root,
 						projectRoot,

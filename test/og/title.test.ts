@@ -14,9 +14,22 @@ describe('cardTitle — the site name comes off', () => {
 		}
 	});
 
-	it('by the site name at the start', () => {
+	it('by the site name at the start, whatever the separator', () => {
 		expect(cardTitle('LumiThemes — Skip the build. Start selling.', { siteName: 'LumiThemes' })).toBe('Skip the build. Start selling.');
-		expect(cardTitle('Acme: Pricing', { siteName: 'Acme' })).toBe('Pricing');
+		for (const title of ['Acme — Pricing', 'Acme – Pricing', 'Acme - Pricing', 'Acme | Pricing', 'Acme · Pricing', 'Acme: Pricing']) {
+			expect(cardTitle(title, { siteName: 'Acme' })).toBe('Pricing');
+		}
+	});
+
+	it('by a template that leads with the name', () => {
+		expect(cardTitle('Acme — Pricing', { titleTemplate: 'Acme — %s' })).toBe('Pricing');
+		expect(cardTitle('Acme — Pricing', { titleTemplate: 'Acme — %s', siteName: 'Acme' })).toBe('Pricing');
+	});
+
+	it("by the card's wordmark, when the titles carry that rather than the site name", () => {
+		expect(cardTitle('Pricing — Relay', { siteName: 'Relay Inc.', wordmark: 'Relay' })).toBe('Pricing');
+		expect(cardTitle('Relay | Pricing', { wordmark: 'Relay' })).toBe('Pricing');
+		expect(cardTitle('Pricing — Relay Inc.', { siteName: 'Relay Inc.', wordmark: 'Relay' })).toBe('Pricing');
 	});
 
 	it('in any case, keeping separators inside the page half', () => {

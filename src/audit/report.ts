@@ -35,6 +35,20 @@ export interface ReportLogger {
  */
 const line = (f: Finding): string => `${f.path}  [${f.check}]  ${f.message}`;
 
+/** How many paths the skipped-pages line names before it says "and N more". */
+const LISTED = 5;
+
+/**
+ * Some paths for a log line, the rest counted.
+ *
+ * @param paths - The paths.
+ * @returns e.g. `/thanks, /search and 3 more`.
+ */
+function list(paths: string[]): string {
+	const shown = paths.slice(0, LISTED).join(', ');
+	return paths.length > LISTED ? `${shown} and ${paths.length - LISTED} more` : shown;
+}
+
 /**
  * Audit the built site and log what's wrong with it.
  *
@@ -63,7 +77,10 @@ export function reportAudit(
 	/* Astro already knows the site URL, and without it the audit can't tell an
 	 * internal link from an external one: every absolute canonical reads as
 	 * off-site. An explicit `site` in the options still wins. */
-	const { findings, checked, errors, warnings } = auditPages(pages, { site, ...auditOptions });
+	const { findings, checked, skipped, errors, warnings } = auditPages(pages, { site, ...auditOptions });
+
+	/* Said once, so a page that went noindex by mistake is still in the log. */
+	if (skipped.length) logger.info(`${skipped.length} noindex page(s) not audited: ${list(skipped)}`);
 
 	if (findings.length === 0) {
 		logger.info(`${checked} page(s) checked, no problems found.`);
