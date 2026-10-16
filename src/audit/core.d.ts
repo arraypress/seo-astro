@@ -47,11 +47,14 @@ export interface PageRead {
   description?: string;
   robots?: string;
   canonical?: string;
-  og: { title?: string; type?: string; image?: string; url?: string };
+  og: { title?: string; type?: string; image?: string; url?: string; siteName?: string };
   h1: string[];
   images: Array<{ tag: string; hasAlt: boolean; src?: string }>;
   hrefs: string[];
 }
+
+/** Error pages (`/404`, `/500`): never orphans, never listed in llms.txt. */
+export const ERROR_PAGES: Set<string>;
 
 /** Default severity for every check. */
 export const CHECKS: Record<CheckName, 'error' | 'warn'>;

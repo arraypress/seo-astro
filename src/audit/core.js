@@ -1,5 +1,5 @@
 /**
- * @arraypress/seo-astro/audit
+ * @arraypress/seo-astro/audit/core
  *
  * Build-time SEO checks over rendered HTML.
  *
@@ -19,14 +19,20 @@
  * Zero dependencies — the HTML readers below are deliberately small rather
  * than a parser dependency, and they only ever read build output.
  *
- * @module @arraypress/seo-astro/audit
+ * @module @arraypress/seo-astro/audit/core
  */
 
 const NAMED = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
 
-/* Entities have to go before anything is measured or compared: `&amp;` is one
- * character to a search engine and five to `String.length`, and two pages whose
- * titles differ only in encoding are duplicates. */
+/**
+ * Decode HTML entities. They have to go before anything is measured or
+ * compared: `&amp;` is one character to a search engine and five to
+ * `String.length`, and two pages whose titles differ only in encoding are
+ * duplicates.
+ *
+ * @param {string} str - Text from the HTML.
+ * @returns {string} The text with entities decoded.
+ */
 function decode(str) {
   return String(str).replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, code) => {
     if (code[0] === '#') {
@@ -39,6 +45,12 @@ function decode(str) {
 
 const ATTR = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/g;
 
+/**
+ * Read a tag's attributes.
+ *
+ * @param {string} tag - The opening tag, e.g. `<meta name="x" content="y">`.
+ * @returns {Object<string, string>} Lower-cased attribute name → decoded value.
+ */
 function attrs(tag) {
   const out = {};
   ATTR.lastIndex = 0;
@@ -47,12 +59,27 @@ function attrs(tag) {
   return out;
 }
 
-/* `alt=""` is a valid, meaningful declaration (the image is decorative) and must
- * not be reported. Only a genuinely absent attribute is a finding, so presence
- * is tested separately from value. */
+/**
+ * Whether a tag has an attribute at all. `alt=""` is a valid, meaningful
+ * declaration (the image is decorative) and must not be reported: only a
+ * genuinely absent attribute is a finding, so presence is tested separately
+ * from value.
+ *
+ * @param {string} tag - The opening tag.
+ * @param {string} name - The attribute name.
+ * @returns {boolean} True when it's present, empty or not.
+ */
 const hasAttr = (tag, name) =>
   new RegExp(`\\s${name}(\\s*=|[\\s/>]|$)`, 'i').test(tag);
 
+/**
+ * The inside of the first element of a kind, or the whole document when
+ * there's none.
+ *
+ * @param {string} html - The document.
+ * @param {string} tag - The element name, e.g. `head`.
+ * @returns {string} Its contents.
+ */
 const section = (html, tag) => {
   const m = html.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'i'));
   return m ? m[1] : html;
@@ -88,6 +115,7 @@ export function readPage(html) {
       type: og('og:type'),
       image: og('og:image'),
       url: og('og:url'),
+      siteName: og('og:site_name'),
     },
     h1: [...body.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi)].map((m) =>
       decode(m[1].replace(/<[^>]*>/g, '')).trim(),
@@ -101,7 +129,12 @@ export function readPage(html) {
   };
 }
 
-/** Collapse the many ways one page can be addressed into a single key. */
+/**
+ * Collapse the many ways one page can be addressed into a single key.
+ *
+ * @param {string} p - A path: `/a/index.html`, `/a.html`, `/a/`, `/a?x#y`.
+ * @returns {string} The key: `/a`, or `/` for the home page.
+ */
 export function normalizePath(p) {
   let out = String(p).split('#')[0].split('?')[0];
   out = out.replace(/\/index\.html?$/i, '/').replace(/\.html?$/i, '');
@@ -109,6 +142,15 @@ export function normalizePath(p) {
   return out || '/';
 }
 
+/**
+ * The page a link points at, if it's on this site.
+ *
+ * @param {string} href - The link.
+ * @param {string} fromPath - The path of the page it's on.
+ * @param {string} [site] - The site URL.
+ * @returns {string|null} The target's normalised path, or null for an
+ *   off-site, fragment-only or non-http link.
+ */
 function linkTarget(href, fromPath, site) {
   if (!href || href.startsWith('#') || /^(mailto:|tel:|javascript:|data:)/i.test(href)) return null;
   try {
@@ -121,6 +163,13 @@ function linkTarget(href, fromPath, site) {
   }
 }
 
+/**
+ * Error pages: in the build, but reached by failing to find a page rather
+ * than by a link, and never a page to send anyone to.
+ */
+export const ERROR_PAGES = new Set(['/404', '/500']);
+
+/** The audit's options when none are given. */
 const DEFAULTS = {
   maxTitleLength: 60,
   minTitleLength: 15,
@@ -160,9 +209,9 @@ export const CHECKS = {
  * @param {Array<{path: string, html: string}>} pages - Every rendered page.
  * @param {Object} [options={}] - Thresholds and check configuration.
  * @param {number} [options.maxTitleLength=60] - Heuristic, not a spec. See the module note.
- * @param {number} [options.minTitleLength=15]
- * @param {number} [options.maxDescriptionLength=155]
- * @param {number} [options.minDescriptionLength=50]
+ * @param {number} [options.minTitleLength=15] - Shorter titles are reported.
+ * @param {number} [options.maxDescriptionLength=155] - Heuristic, like the title's.
+ * @param {number} [options.minDescriptionLength=50] - Shorter descriptions are reported.
  * @param {string} [options.site] - Site URL, used to tell internal links from external ones.
  * @param {Array<string|RegExp>} [options.ignore=[]] - Paths to skip entirely.
  * @param {Object<string, string|false>} [options.checks={}] - Per-check level override, or `false` to disable.
@@ -172,10 +221,23 @@ export function auditPages(pages = [], options = {}) {
   const o = { ...DEFAULTS, ...options };
   const checks = { ...CHECKS, ...o.checks };
 
+  /**
+   * Whether `ignore` excludes a page.
+   *
+   * @param {string} path - The page's normalised path.
+   * @returns {boolean} True to skip it.
+   */
   const skip = (path) =>
     o.ignore.some((rule) => (rule instanceof RegExp ? rule.test(path) : normalizePath(rule) === path));
 
   const findings = [];
+  /**
+   * Record a finding, at the check's configured level, unless it's off.
+   *
+   * @param {string} check - The check's name.
+   * @param {string} path - The page.
+   * @param {string} message - What's wrong.
+   */
   const add = (check, path, message) => {
     const level = checks[check];
     if (!level) return; // disabled
@@ -254,6 +316,10 @@ export function auditPages(pages = [], options = {}) {
    * meant to share its title with the target and is meant not to be linked, so
    * excluding it from the duplicate and orphan checks is what stops those
    * checks firing on every correctly-deduplicated page on the site. */
+  /**
+   * @param {Object} p - A page seen in the first pass.
+   * @returns {boolean} True when its canonical names a different page.
+   */
   const isDeduped = (p) => p.canonicalPath && p.canonicalPath !== p.path;
 
   for (const p of seen) {
@@ -272,6 +338,13 @@ export function auditPages(pages = [], options = {}) {
     // Otherwise the target exists and is self-canonical — a correct dedup pair.
   }
 
+  /**
+   * Report every value of a field shared by more than one page.
+   *
+   * @param {string} field - The field of the page read, e.g. `title`.
+   * @param {string} check - The check to report under.
+   * @param {string} label - What to call the field in the message.
+   */
   const dupes = (field, check, label) => {
     const groups = new Map();
     for (const p of seen) {
@@ -298,10 +371,11 @@ export function auditPages(pages = [], options = {}) {
       }
     }
     for (const p of seen) {
-      // The homepage is reached without a link, a noindex page is meant to be
-      // unreachable, and a deduplicated page is meant to be reached at its
-      // canonical instead — none is an orphan in the sense that matters.
-      if (p.path === '/' || p.noindex || isDeduped(p)) continue;
+      // The homepage and the error pages are reached without a link, a noindex
+      // page is meant to be unreachable, and a deduplicated page is meant to be
+      // reached at its canonical instead — none is an orphan in the sense that
+      // matters.
+      if (p.path === '/' || ERROR_PAGES.has(p.path) || p.noindex || isDeduped(p)) continue;
       if (!linked.has(p.path)) add('orphan-page', p.path, 'No internal link points at this page.');
     }
   }

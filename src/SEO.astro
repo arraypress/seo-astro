@@ -3,10 +3,10 @@
  * SEO.astro
  * ---------
  *
- * Idiomatic Astro component over the `buildHead()` builder in this package. Drop it in
- * your `<head>` with the same options `buildHead` accepts — title, description,
- * canonical url, image, Open Graph + Twitter, robots, hreflang, article meta,
- * verification, and JSON-LD — and it renders the full set of tags for you.
+ * One page's head tags: title, description, canonical, Open Graph and Twitter,
+ * robots, hreflang, article meta, verification and JSON-LD. Needs the `seo()`
+ * integration in `astro.config`, which supplies the site-wide defaults, the
+ * site-wide JSON-LD and the generated OG card.
  *
  * @example
  *   ---
@@ -14,23 +14,18 @@
  *   ---
  *   <head>
  *     <meta charset="utf-8" />
- *     <SEO
- *       title="My Page"
- *       description="A great page"
- *       image="/og.png"
- *       siteName="Example"
- *     />
- *
- *   The canonical is derived from the current URL automatically (tracking
- *   params stripped); pass `url` only to override it.
+ *     <SEO title="My Page" description="A great page" />
  *   </head>
+ *
+ *   The canonical is derived from the current URL (tracking params stripped);
+ *   pass `url` only to override it. With no `image`, the page gets a card
+ *   rendered at build; `og={{ eyebrow: 'Blog' }}` changes it, `og={false}`
+ *   turns it off.
  */
-import { buildHead, canonicalize } from './core.js';
+import config from 'virtual:@arraypress/seo-astro/config';
+import { pageHead } from './head/page.js';
 import type { SEOProps } from './types';
 
-// Auto-derive the canonical (and og:url) from the current request URL —
-// tracking params stripped — unless an explicit `url` is passed.
-const { url, ...rest } = Astro.props as SEOProps;
-const head = buildHead({ url: url ?? canonicalize(Astro.url.href), ...rest });
+const head = pageHead(Astro.props as SEOProps, { config, url: Astro.url, site: Astro.site });
 ---
 <Fragment set:html={head} />

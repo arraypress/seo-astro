@@ -1,12 +1,12 @@
 /**
- * @arraypress/seo
+ * @arraypress/seo-astro/core
  *
  * HTML meta tag builder for SEO. Open Graph, Twitter Cards, canonical URLs,
  * robots directives, hreflang, and site verification.
  *
- * Zero dependencies. Works everywhere.
+ * Zero dependencies, nothing Astro-shaped: plain functions returning strings.
  *
- * @module @arraypress/seo
+ * @module @arraypress/seo-astro/core
  */
 
 /**
@@ -169,10 +169,16 @@ export function buildHead(options = {}) {
     if (tag.lang && tag.url) parts.push(`<link rel="alternate" hreflang="${esc(tag.lang)}" href="${esc(tag.url)}">`);
   }
 
-  // Extra pass-through <meta>/<link> tags — anything the typed options
-  // don't cover (viewport, theme-color, favicon, sitemap link, …). Each
-  // object's keys become attributes: `true` → bare attribute, and
-  // null/false/undefined → omitted.
+  /**
+   * Extra pass-through `<meta>`/`<link>` tags — anything the typed options
+   * don't cover (viewport, theme-color, favicon, sitemap link, …). Each
+   * object's keys become attributes: `true` → bare attribute, and
+   * null/false/undefined → omitted.
+   *
+   * @param {string} tag - The element name.
+   * @param {Object} attrs - Attribute name → value.
+   * @returns {string} The tag.
+   */
   const attrTag = (tag, attrs) => {
     const a = Object.entries(attrs)
       .filter(([, v]) => v != null && v !== false)
@@ -192,22 +198,6 @@ export function buildHead(options = {}) {
   return parts.join('\n');
 }
 
-/**
- * Inject head HTML into an existing HTML document string.
- *
- * Removes any existing `<title>` tag and inserts the provided HTML
- * immediately before the closing `</head>` tag.
- *
- * @param {string} html - The full HTML document string.
- * @param {string} headHtml - The HTML to inject (typically from {@link buildHead}).
- * @returns {string} The modified HTML document.
- *
- * @example
- * const doc = '<html><head><title>Old</title></head><body></body></html>';
- * const head = buildHead({ title: 'New Title', description: 'Updated.' });
- * const result = injectHead(doc, head);
- * // Old <title> removed, new head tags injected before </head>
- */
 /**
  * Serialise JSON-LD for inline embedding.
  *
@@ -249,6 +239,22 @@ export function breadcrumbList(items = []) {
   };
 }
 
+/**
+ * Inject head HTML into an existing HTML document string.
+ *
+ * Removes any existing `<title>` tag and inserts the provided HTML
+ * immediately before the closing `</head>` tag.
+ *
+ * @param {string} html - The full HTML document string.
+ * @param {string} headHtml - The HTML to inject (typically from {@link buildHead}).
+ * @returns {string} The modified HTML document.
+ *
+ * @example
+ * const doc = '<html><head><title>Old</title></head><body></body></html>';
+ * const head = buildHead({ title: 'New Title', description: 'Updated.' });
+ * const result = injectHead(doc, head);
+ * // Old <title> removed, new head tags injected before </head>
+ */
 export function injectHead(html, headHtml) {
   let result = html.replace(/<title>[^<]*<\/title>/, '');
   return result.replace('</head>', headHtml + '\n</head>');

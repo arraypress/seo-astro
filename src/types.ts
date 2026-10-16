@@ -1,13 +1,13 @@
 /**
  * @module @arraypress/seo-astro/types
  */
-import type { BuildHeadOptions } from './core.js';
+import type { PageHeadProps } from './head/page.js';
 
 /**
- * Props for `<SEO />` — identical to `buildHead()`'s options:
- * `title`, `titleTemplate`, `description`, `url`, `image`, `type`, `robots`, `siteName`,
- * `twitterCard`/`twitterSite`/`twitterCreator`, `locale`,
- * `articlePublished`/`articleModified`/`articleAuthor`, `verification`,
- * `hreflang`, and `jsonLd`.
+ * Props for `<SEO />` — `buildHead()`'s options (`title`, `titleTemplate`,
+ * `description`, `url`, `image`, `type`, `robots`, `siteName`, the Twitter and
+ * article fields, `locale`, `verification`, `hreflang`, `jsonLd`, `meta`,
+ * `link`), plus `og` for the page's generated card.
  */
-export type SEOProps = BuildHeadOptions;
+export type SEOProps = PageHeadProps;
+export type { OgCard } from './og/marker.js';

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { auditPages, readPage, normalizePath, CHECKS } from '../src/audit.js';
-import type { AuditOptions, CheckName } from '../src/audit.js';
+import { auditPages, readPage, normalizePath, CHECKS } from '../../src/audit/core.js';
+import type { AuditOptions, CheckName } from '../../src/audit/core.js';
 
 const SITE = 'https://example.com';
 
@@ -282,6 +282,10 @@ describe('set-level checks — the ones a per-page editor cannot do', () => {
 
 	it('never calls the homepage an orphan', () => {
 		expect(checksFor([page({ path: '/index.html' })])).not.toContain('orphan-page');
+	});
+
+	it('never calls an error page an orphan', () => {
+		expect(checksFor([page({ path: '/index.html' }), page({ path: '/404.html' })])).not.toContain('orphan-page');
 	});
 
 	it('counts an absolute internal link as a link', () => {

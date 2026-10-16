@@ -5,6 +5,86 @@ All notable changes to `@arraypress/seo-astro` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] — Unreleased
+
+One integration for everything a site needs to be found. `seo()` takes over
+what used to be four packages and a hand-written script per site: OG cards,
+llms.txt, security headers and the audit.
+
+### Added
+
+- **`seo()`, at `@arraypress/seo-astro/integration`.** Feeds `<SEO />` its
+  site-wide settings through a virtual module, and at the end of the build
+  renders the OG cards, writes `/llms.txt`, audits the pages and writes
+  `_headers`, in that order. Every part is on by default and `false` turns one
+  off.
+- **A share card per page, rendered at build.** A page with a title and no
+  `image` gets `/og/<page>.png`, drawn by `@arraypress/og-image` from its title
+  and description, with `og:image`, its width, height and alt text pointing at
+  it. `<SEO og={{ … }}>` changes what a card says, `og={false}` opts a page
+  out, and `seo({ og })` sets the brand: colours, logo (an SVG works as it
+  is), wordmark, fonts. Cards are cached under Astro's `cacheDir` and only
+  re-rendered when something that changes the picture does, which matters on
+  a site with a thousand pages.
+
+  `@arraypress/og-image` is an optional peer dependency, loaded only when
+  cards are on, so a site with `og: false` never installs Satori or resvg.
+  With cards on and the package missing, setup stops and says what to install.
+- **A card's headline drops the site's name.** "Pricing — Acme" is right for
+  the tab and the results page, but the card shows Acme in its footer, so the
+  headline is "Pricing": the `titleTemplate`'s own text comes off, else the
+  `siteName` at either end with whatever joins it. `og.title` is used as
+  given.
+- **Cards in the site's own light and type.** `seo({ og })` passes
+  og-image's `backdrop` (colour glows and a film grain), `stripe`,
+  `fontFamily` and `displayFontFamily` through, and they're part of the cache
+  key.
+- **`/llms.txt` from the build.** By default, the home page's name and
+  description and every indexable page with its title and description. Pass
+  the content, or a function given `{ origin, pages }`, to say more. A route
+  of the site's own wins over the default; content in both places stops the
+  build rather than silently picking one.
+- **`_headers` with a CSP hashed from the built pages**, written by
+  `@arraypress/security-headers` 3's `writeHeadersFile()`. The pages are read
+  once and the same scan is handed over, rather than read again. HSTS covers
+  this host only, with no `includeSubDomains` (security-headers 3's default):
+  a site's build can't know what else lives on its domain. Opt in with
+  `headers: { hsts: { includeSubDomains: true } }`.
+- **`seo({ jsonLd })`** — structured data on every page. When a page has more
+  than one node, `<SEO />` joins them into one `@graph` with
+  `@arraypress/jsonld`'s `buildGraph()`, so the page's Article names the
+  site's Organization as its publisher.
+- **`seo({ defaults })`** — `<SEO />` props for every page.
+- `@arraypress/seo-astro/jsonld`: the `@arraypress/jsonld` builders, so a
+  site needs one package.
+- `@arraypress/seo-astro/llms` and `./llms/core`: everything from
+  `@arraypress/llms-txt-astro` — `llmsTxtRoute`, `llmsFullTxtRoute`,
+  `collectionSection`, `collectionDocuments`, `originOf`, and the `build`,
+  `buildFull`, `parse` and `llmsTxtResponse` builders — for content a config
+  can't reach, such as a content collection.
+- `readPage()` reads `og:site_name`.
+
+### Changed
+
+- **`<SEO />` needs `seo()` in `astro.config`.** It reads its settings from the
+  integration and won't build without it.
+- `<SEO image>` is made absolute against `site`. Social scrapers have no base
+  to resolve `/og.png` against, so a relative image gave no card at all.
+- The audit no longer calls `/404` or `/500` an orphan page. They're reached
+  by not finding a page, never by a link, so every site got the same false
+  warning.
+- The audit's error tells you to set `audit: { failOn: 'never' }`.
+- Requires Node 22.12 or later, which Astro 6 already does. The renderer is
+  loaded with Node's `require`, which loads ES modules from 22.12: a dynamic
+  `import()` in an integration goes through Vite's module runner, which
+  Astro closes before the build hooks run.
+
+### Removed
+
+- **`seoAudit()` and the `@arraypress/seo-astro/audit` export.** Use
+  `seo({ audit })`; the options are the same. `auditPages()` stays at
+  `@arraypress/seo-astro/audit/core`.
+
 ## [2.3.0] — Unreleased
 
 ### Fixed
